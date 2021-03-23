@@ -19,14 +19,16 @@ const assetSchema = new mongoose.Schema({
         "default":[]
     },
     currLocation : {
-        type:Object
+        type:Object,
+        "default":{}
     },
     tripName : {
         type: String
     },
     history : {
-        type: Object
+        type: Object,
+        "default":{}
     }
-},{ timestamps: { createdAt: 'created_at' }});
+},{ minimize: false ,timestamps: { createdAt: 'created_at' }});
 
 module.exports = mongoose.model("Asset",assetSchema );

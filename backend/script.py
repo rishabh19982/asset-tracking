@@ -12,7 +12,7 @@ def create_user():
     }
     try:
         resp = requests.post(
-            data=data, url='https://jumbogps-t2-backend.herokuapp.com/createAsset')
+            data=data, url='http://localhost:8081/createAsset')
         print("Response Status Code: " + str(resp.status_code))
     except requests.exceptions.ConnectionError:
         print(
@@ -75,6 +75,22 @@ def share_cor():
         time.sleep(sleep_duration)
     changeStatus('non-active')
 
+def getAsset():
+    data = {
+        'name': "Rishi",
+        'type': "Person",
+        'status' : "non-active"
+    }
+    try:
+        resp = requests.get(
+            url='http://localhost:8081/assets?type=person')
+        print("Response Status Code: " + str(resp.status_code))
+    except requests.exceptions.ConnectionError:
+        print(
+            '\n\nError: Could not create user. Make sure you have started the server!!!\n\n')
+
+
 if __name__ == '__main__':
     create_user()
-    share_cor()
+    #share_cor()
+    getAsset()

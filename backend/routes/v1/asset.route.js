@@ -71,8 +71,31 @@ function handleStatus(req,res,asset){
     }
 }
 
-router.get('/assets',async (req,res) => { 
-    Assets.find({}, (err, allAssets) => {
+router.get('/assets',async (req,res) => {
+    let id = req.query.id;
+    let type = req.query.type;
+    let query = {}
+    console.log(id,type);
+    if(id){
+        const check = id.match(/^\d+$/) != null && parseInt(id) === parseFloat(id);
+        console.log('hii');
+        if(!check){
+            res.status(404).json({ msg : "Invalid Id"});
+            return;
+        } 
+        query.id = id;
+    }
+    if(type){
+        const check = type.match(/^[A-Za-z]+$/) !== null 
+        console.log('hii');
+
+        if(!check){
+            res.status(404).json({ msg : "Invalid Id"});
+            return;
+        }
+        query.type = type 
+    }
+    Assets.find(query, (err, allAssets) => {
         if (err) {
           console.log(err);
           res.status(500).send();
@@ -88,6 +111,7 @@ router.get('/assets',async (req,res) => {
                     "history" : asset.history
                 }
             });
+            console.log(result);
             res.send(result.slice(0,100));
         }
     });  
@@ -155,7 +179,10 @@ router.post('/createAsset',async (req,res) => {
         'id': lastAsset.length > 0 ? lastAsset[0].id + 1 : 1,
         'name': req.body.name,
         'type':req.body.type,
-        'status':req.body.status
+        'status':req.body.status,
+        'locationArray': [],
+        'currLocation' : {},
+        'history':{}
     }
     // console.log(newAsset);
     let flag = await checkDuplicate(req);
