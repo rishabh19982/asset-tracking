@@ -75,10 +75,10 @@ router.get('/assets',async (req,res) => {
     let id = req.query.id;
     let type = req.query.type;
     let query = {}
-    console.log(id,type);
+    // console.log(id,type);
     if(id){
         const check = id.match(/^\d+$/) != null && parseInt(id) === parseFloat(id);
-        console.log('hii');
+        // console.log('hii');
         if(!check){
             res.status(404).json({ msg : "Invalid Id"});
             return;
@@ -87,7 +87,7 @@ router.get('/assets',async (req,res) => {
     }
     if(type){
         const check = type.match(/^[A-Za-z]+$/) !== null 
-        console.log('hii');
+        // console.log('hii');
 
         if(!check){
             res.status(404).json({ msg : "Invalid Id"});
@@ -111,7 +111,7 @@ router.get('/assets',async (req,res) => {
                     "history" : asset.history
                 }
             });
-            console.log(result);
+            // console.log(result);
             res.send(result.slice(0,100));
         }
     });  

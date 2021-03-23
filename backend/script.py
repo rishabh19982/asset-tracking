@@ -12,7 +12,7 @@ def create_user():
     }
     try:
         resp = requests.post(
-            data=data, url='http://localhost:8081/createAsset')
+            data=data, url='https://jumbogps-t2-backend.herokuapp.com/createAsset')
         print("Response Status Code: " + str(resp.status_code))
     except requests.exceptions.ConnectionError:
         print(
@@ -83,7 +83,7 @@ def getAsset():
     }
     try:
         resp = requests.get(
-            url='http://localhost:8081/assets?type=person')
+            url='https://jumbogps-t2-backend.herokuapp.com/assets?type=Person')
         print("Response Status Code: " + str(resp.status_code))
     except requests.exceptions.ConnectionError:
         print(
