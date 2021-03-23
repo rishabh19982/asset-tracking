@@ -26,5 +26,6 @@ router.post('/signUp', async (req,res) =>{
         res.send(err)
     }
 
+    
 })
     
