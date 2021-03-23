@@ -1,0 +1,1 @@
+curl 'http://router.project-osrm.org/route/v1/foot/19.310472,72.854042;20.309984,73.850942?overview=false'
