@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const Assets = require("../../models/asset.model");
-
+const fetch = require("node-fetch");
+const config = require("../../config/config");
 async function checkDuplicate(req){
     
     const assets = await Assets.find({$and : [ {"name": req.body.name },{ "type": req.body.type } ]}).limit(1) ;
@@ -12,15 +13,96 @@ async function checkDuplicate(req){
     return true;
 }
 
-function changeToActive(req,res,asset){
+function checkGeofence(myPts,X,Y){
+    let  sides = myPts.length - 1;
+    let j = sides - 1;
+    let pointStatus = false;
+    for (let i = 0; i < sides; i++)
+    {
+        if (myPts[i].Y < Y && myPts[j].Y >= Y || 
+    myPts[j].Y < Y && myPts[i].Y >= Y)
+        {
+            if (myPts[i].X + (Y - myPts[i].Y) / 
+    (myPts[j].Y - myPts[i].Y) * (myPts[j].X - myPts[i].X) < X)
+            {
+                pointStatus = !pointStatus ;                        
+            }
+        }
+        j = i;
+    }
+    return pointStatus;
+}
+
+async function getExpected(tripDetails){
+    let expected = [];
+    console.log('Expected')
+    console.log(config.mapbox_token);
+    if(tripDetails.source && tripDetails.destination){
+        let slt = tripDetails.source.lt;
+        let slg = tripDetails.source.lg;
+        let dlt = tripDetails.destination.lt;
+        let dlg = tripDetails.destination.lg;
+        let url = 'https://api.mapbox.com/directions/v5/mapbox/walking/' + slg + '%2C' + slt + '%3B' + dlg + '%2C' + dlt + '?alternatives=true&geometries=geojson&steps=true&access_token=' + config.mapbox_token;
+        console.log(url);
+        let res = await (await fetch(url)).json() ;
+        let duration = 0;
+        console.log(res);
+        res['routes'].forEach(route => {
+            duration += route['duration']
+            // console.log(route['duration']);
+            route['legs'].forEach( leg =>{
+                leg['steps'].forEach( step => {
+                    step['geometry']['coordinates'].forEach(cor => {
+                        //console.log(cor[0],cor[1])
+                        expected.push({'lt':cor[1],'lg':cor[0]})
+                    });
+                });
+            });
+        });
+    }
+    return expected;
+}
+
+function detectAnomaly(expected,locationArray,location,tripDetails){
+    let i = locationArray.length - 1;
+    if( i >= 0 && i < expected.length){
+        if(expected[i].lt !== location.lt && expected[i].lg !== location.lg ){
+            tripDetails.anomalyFlag = true;
+            tripDetails.anomalyDetails.push(location);
+        }
+    }
+    return tripDetails;
+}
+
+async function changeToActive(req,res,asset){
     const history = asset.length > 0 && asset[0].history ? asset[0].history : {} ;
     const tripName = req.body.tripName;
     console.log(tripName);
-
+    console.log(req.body);
     if(tripName && !(tripName in history)){
+        const tripDetails = {
+            "tripName":tripName
+        };
+        if(req.body.sLocation){
+            tripDetails.source = {
+                "lt": req.body.sLocation.lat,
+                "lg": req.body.sLocation.lng
+            };
+        }
+        if(req.body.dLocation){
+            tripDetails.destination = {
+                "lt": req.body.dLocation.lat,
+                "lg": req.body.dLocation.lng
+            };
+        }
+
+        tripDetails.anomalyFlag = false,
+        tripDetails.anomalyDetails = [],
+        tripDetails.expected = await getExpected(tripDetails);
+        console.log(tripDetails)
         Assets.updateOne({"id":req.body.id},{$set:{
             "status":req.body.status,
-            "tripName":tripName
+            "tripDetails":tripDetails,
         }},(error,response) => {
             if(error){
                 res.status(400).send('Error in changing status')
@@ -37,20 +119,22 @@ function changeToActive(req,res,asset){
 function changeToNonActive(req,res,asset){
     let locationArray = asset.length > 0 && asset[0].locationArray ? asset[0].locationArray : [] ;
     let prevLocation = asset.length > 0 && asset[0].currLocation ? asset[0].currLocation : {} ;
-    const tripName = asset.length > 0 && asset[0].tripName ? asset[0].tripName : "" ;
+    const tripName = asset.length > 0 && asset[0].tripDetails ? asset[0].tripDetails.tripName : "" ;
     let history = asset.length > 0 && asset[0].history ? asset[0].history : {} ;
     if(Object.keys(prevLocation).length){
         locationArray.push(prevLocation);
     }
     if (tripName && !(tripName in history)){
-        history[tripName] = locationArray;
+        const details = asset.length > 0 && asset[0].tripDetails ? asset[0].tripDetails : {}
+        details.locationArray = locationArray;
+        history[tripName] = details;
     }
     Assets.updateOne({"id":req.body.id},{$set:{
         "status":req.body.status,
         "currLocation":{},
         "locationArray":[],
         "history":history,
-        "tripName":""
+        "tripDetails": {}
     }},(error,response) => {
         if(error){
             res.status(400).send('Status rest failing');
@@ -108,6 +192,7 @@ router.get('/assets',async (req,res) => {
                     "locationArray" : asset.locationArray,
                     "currLocation" : asset.currLocation,
                     "status" : asset.status,
+                    "tripDetails": asset.tripDetails,
                     "history" : asset.history
                 }
             });
@@ -119,6 +204,7 @@ router.get('/assets',async (req,res) => {
 
 
 router.put('/changeStatus',async (req,res) => {
+    console.log(req.body);
     Assets.find({"id":req.body.id},(err ,asset) => {
         if (err) {
             console.log(err);
@@ -146,17 +232,20 @@ router.put('/postLocation',async (req,res) => {
             } else{
                 let locationArray = asset.length > 0 && asset[0].locationArray ? asset[0].locationArray : [] ;
                 let prevLocation = asset.length  > 0 && asset[0].currLocation ? asset[0].currLocation : {};
+                let expected = asset.length  > 0 && asset[0].tripDetails && asset[0].tripDetails.expected  ? asset[0].tripDetails.expected : [];
+                let tripDetails = asset.length  > 0 && asset[0].tripDetails ? asset[0].tripDetails : {};
                 const location = {
                     'lt': req.body.lt,
                     'lg': req.body.lg,
                     'timeStamp':req.body.timeStamp
                 }
+                tripDetails = detectAnomaly(expected,locationArray,location,tripDetails);
                 // console.log(location);
                 if(Object.keys(prevLocation).length){
                     locationArray.push(prevLocation);
                 }
                 // console.log(locationArray)
-                Assets.updateOne({"id":req.body.id},{$set:{"locationArray":locationArray,"currLocation":location}},(error,response) => {
+                Assets.updateOne({"id":req.body.id},{$set:{"locationArray":locationArray,"currLocation":location,"tripDetails":tripDetails}},(error,response) => {
                     if(error){
                         res.status(400).send("Location rest failed");
                     } else {

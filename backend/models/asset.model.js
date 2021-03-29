@@ -22,8 +22,8 @@ const assetSchema = new mongoose.Schema({
         type:Object,
         "default":{}
     },
-    tripName : {
-        type: String
+    tripDetails : {
+        type: Object
     },
     history : {
         type: Object,

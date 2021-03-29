@@ -3,17 +3,19 @@ import datetime
 import json
 import time
 
+headers={'authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYwNjIyN2I3MGU3YWM3MDAxNWUwYjQ5MyIsImlhdCI6MTYxNzA0NTQzMiwiZXhwIjoxNjE3MTMxODMyfQ.iMncNjbz-6KE21AjhrKXJWaU1waXsrQJFXrrg4mj8u4' ,'Content-Type': 'application/json', 'Accept': 'text/plain'}
 
 def create_user():
     data = {
-        'name': "Rishi",
+        'name': "Charu",
         'type': "Person",
         'status' : "non-active"
     }
+    request = json.dumps(data)
     try:
         resp = requests.post(
-            data=data, url='https://jumbogps-t2-backend.herokuapp.com/createAsset')
-        print("Response Status Code: " + str(resp.status_code))
+            data=request, url='https://jumbogps-t2-backend.herokuapp.com/createAsset',headers=headers)
+        print("Response Status Code: " + str(resp.text))
     except requests.exceptions.ConnectionError:
         print(
             '\n\nError: Could not create user. Make sure you have started the server!!!\n\n')
@@ -39,14 +41,26 @@ def get_cor():
             '\n\nError: Could not get coordinates. Make sure you have started the server!!!\n\n')
 
 def changeStatus(status,tripName=None):
-    data = {
-        'id' : 1,
-        'status' : status,
-        'tripName': tripName
+    source = {
+        'lat' : '19.316815',
+        'lng' : '72.854570'
     }
+    destination = {
+        'lat' : '19.305963',
+        'lng' : '72.857173'
+    }
+    data = {
+        'id' : 7,
+        'status' : status,
+        'tripName': tripName,
+        'sLocation' : source,
+        'dLocation' : destination
+    }
+    request = json.dumps(data)
+    print(request)
     try:
         resp = requests.put(
-            data=data, url='https://jumbogps-t2-backend.herokuapp.com/changeStatus')
+            data=request, url='https://jumbogps-t2-backend.herokuapp.com/changeStatus',headers=headers)
         print("Response Status Code: " + str(resp.text))
     except requests.exceptions.ConnectionError:
         print(
@@ -57,23 +71,24 @@ def share_cor():
     coordinates,duration =  get_cor()
     sleep_duration = duration / len(coordinates)
     print(sleep_duration)
-    changeStatus('active','trip1')
+    changeStatus('non-active','trip6')
     for i in range(2):
         data = {
-            'id': 1,
+            'id': 7,
             'lt': coordinates[i]['lt'],
             'lg': coordinates[i]['lg'],
-            'timeStamp' : datetime.datetime.now()
+            'timeStamp' : datetime.datetime.now().isoformat()
         }
         try:
+            request = json.dumps(data)
             resp = requests.put(
-                data=data, url='https://jumbogps-t2-backend.herokuapp.com/postLocation')
+                data=request, url='https://jumbogps-t2-backend.herokuapp.com/postLocation',headers=headers)
             print("Response Status Code: " + str(resp.text))
         except requests.exceptions.ConnectionError:
             print(
                 '\n\nError: Could not post coordinates. Make sure you have started the server!!!\n\n')
-        time.sleep(sleep_duration)
-    changeStatus('non-active')
+        # time.sleep(sleep_duration)
+    #changeStatus('non-active')
 
 def getAsset():
     data = {
@@ -91,6 +106,6 @@ def getAsset():
 
 
 if __name__ == '__main__':
-    create_user()
+    #create_user()
     #share_cor()
     getAsset()

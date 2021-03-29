@@ -5,8 +5,7 @@ const bcrypt = require('bcrypt')
 
 const UserSchema = new mongoose.Schema({
     name: {
-        type: String, 
-        required: true,
+        type: String,
         validate: function abc(val) {
             var str = val.split(" ").join("");
             if (!validator.isAlpha(str)) {
@@ -25,13 +24,12 @@ const UserSchema = new mongoose.Schema({
         required: true,
         validate: function abc(val) {
             if (!validator.isLength(val, { min: 8, max: undefined })) {
-                throw new Error("Passwordlength is too short. Should be minimum of 8 in length")
+                throw new Error("Password length is too short. Should be minimum of 8 in length")
             }
         }
     },
     confirmPassword: {
         type: String,
-        required: true,
         validate: function abc(val) {
             // console.log("2")
             if (val !== this.password) {
@@ -43,8 +41,6 @@ const UserSchema = new mongoose.Schema({
 
     username: {
         type: String,
-        required: true, 
-        unique: true,
         validate: function abc(val) {
             var str = val.split(" ").join("");
             if (!validator.isAlphanumeric(str)) {
@@ -76,27 +72,28 @@ const UserSchema = new mongoose.Schema({
         zipcode: { type: Number },
 
     },
-    phone: 
-    { type: Number, required: true },
+    phone: { 
+        type: Number, 
+    },
     resetToken: String,
     ExpiresIn: Date
 
 })
-UserSchema.pre('save', async function (next) {
-    this.password = await bcrypt.hash(this.password, 8);
-    this.confirmPassword = await bcrypt.hash(this.confirmPassword, 8);
-    console.log('Insode pre');
-    next();
-})
-UserSchema.methods.abc = function () {
-    // const crypto  =require('crypto')
-    const cryptoToken = crypto.randomBytes(32).toString('hex');
+// UserSchema.pre('save', async function (next) {
+//     this.password = await bcrypt.hash(this.password, 8);
+//     this.confirmPassword = await bcrypt.hash(this.confirmPassword, 8);
+//     console.log('Insode pre');
+//     next();
+// })
+// UserSchema.methods.abc = function () {
+//     // const crypto  =require('crypto')
+//     const cryptoToken = crypto.randomBytes(32).toString('hex');
 
-    this.resetToken = crypto.createHash('sha256').update(cryptoToken).digest('hex');
-    console.log(this.resetToken)
-    this.ExpiresIn = Date.now() + 1000*60*7;
-    return cryptoToken;
-}
+//     this.resetToken = crypto.createHash('sha256').update(cryptoToken).digest('hex');
+//     console.log(this.resetToken)
+//     this.ExpiresIn = Date.now() + 1000*60*7;
+//     return cryptoToken;
+// }
 const UserModels = mongoose.model('User', UserSchema);
 
 
